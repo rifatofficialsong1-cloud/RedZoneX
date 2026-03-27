@@ -23,7 +23,7 @@ def init_db():
 
 @app.route('/')
 def home():
-    return "RedZone X Server is Active!"
+    return "RedZone X Server is Active and Running!"
 
 # অ্যাপের জন্য ভিডিও লিস্ট পাওয়ার API
 @app.route('/api/videos')
@@ -31,7 +31,7 @@ def get_videos():
     try:
         conn = sqlite3.connect('redzone.db')
         cursor = conn.cursor()
-        cursor.execute("SELECT * FROM videos")
+        cursor.execute("SELECT * FROM videos ORDER BY id DESC")
         rows = cursor.fetchall()
         conn.close()
         
@@ -42,48 +42,53 @@ def get_videos():
     except Exception as e:
         return jsonify({"error": str(e)})
 
-# /start কমান্ড দিলে ওয়েলকাম মেসেজ
+# /start কমান্ড দিলে ওয়েলকাম মেসেজ ও মিনি অ্যাপ বাটন
 @bot.message_handler(commands=['start'])
 def welcome(message):
     markup = types.InlineKeyboardMarkup()
-    # আপনার গিটহাব পেজ লিঙ্কটি এখানে দিন
+    # তোমার গিটহাব পেজ লিঙ্ক
     web_link = types.WebAppInfo("https://rifatofficialsong1-cloud.github.io/RedZoneX/")
     btn = types.InlineKeyboardButton("🚀 Open RedZone X", web_app=web_link)
     markup.add(btn)
     
     welcome_text = (
         "🔥 *Welcome to RedZone X!* 🔥\n\n"
-        "আপনার পছন্দের সব প্রিমিয়াম ভিডিও এখন এক জায়গায়। "
-        "নিচের বাটনে ক্লিক করে আমাদের মিনি অ্যাপটি ওপেন করুন।"
+        "আপনার প্রিয় সব প্রিমিয়াম ভিডিও এখন টেলিগ্রাম মিনি অ্যাপে।\n"
+        "নিচের বাটনে ক্লিক করে অ্যাপটি ওপেন করুন।"
     )
     bot.send_message(message.chat.id, welcome_text, parse_mode="Markdown", reply_markup=markup)
 
-# ভিডিও সেভ করার কমান্ড (শুধুমাত্র আপনি ভিডিও পাঠালে সেভ হবে)
+# ভিডিও সেভ করার কমান্ড
 @bot.message_handler(content_types=['video'])
 def save_video(message):
     file_id = message.video.file_id
     caption = message.caption or "Premium Video"
     
-    conn = sqlite3.connect('redzone.db')
-    cursor = conn.cursor()
-    cursor.execute("INSERT INTO videos (file_id, caption) VALUES (?, ?)", (file_id, caption))
-    conn.commit()
-    conn.close()
-    
-    bot.reply_to(message, f"✅ *ভিডিও সাকসেসফুলি সেভ হয়েছে!*\n\n📝 ক্যাপশন: {caption}\nএখন এটি অ্যাপে দেখা যাবে।", parse_mode="Markdown")
+    try:
+        conn = sqlite3.connect('redzone.db')
+        cursor = conn.cursor()
+        cursor.execute("INSERT INTO videos (file_id, caption) VALUES (?, ?)", (file_id, caption))
+        conn.commit()
+        conn.close()
+        bot.reply_to(message, f"✅ *ভিডিও সেভ হয়েছে!*\n\n📝 টাইটেল: {caption}\nএখন এটি মিনি অ্যাপে দেখা যাবে।", parse_mode="Markdown")
+    except Exception as e:
+        bot.reply_to(message, f"❌ এরর: {str(e)}")
 
 def run_flask():
-    # Render এর জন্য পোর্ট সেটআপ
     port = int(os.environ.get('PORT', 8080))
     app.run(host='0.0.0.0', port=port)
 
 if __name__ == "__main__":
     init_db()
-    # Flask কে আলাদা থ্রেডে চালানো
-    Thread(target=run_flask, daemon=True).start()
+    
+    # ১. Flask সার্ভারকে ব্যাকগ্রাউন্ড থ্রেডে চালানো
+    flask_thread = Thread(target=run_flask)
+    flask_thread.daemon = True
+    flask_thread.start()
+    
+    print("Forcefully clearing old connections...")
+    bot.remove_webhook() # পুরনো কোনো ওয়েবহুক থাকলে তা মুছে দিবে
     
     print("RedZone X Bot is starting...")
-    # কোনো পুরনো ওয়েবহুক থাকলে মুছে ফেলা
-    bot.remove_webhook()
-    # বট পোলিং শুরু
-    bot.infinity_polling(timeout=20, long_polling_timeout=10)
+    # ২. ইনফিনিটি পোলিং শুরু (পুরনো জমানো মেসেজ ইগনোর করে)
+    bot.infinity_polling(timeout=20, long_polling_timeout=10, skip_pending=True)
