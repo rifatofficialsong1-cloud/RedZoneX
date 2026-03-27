@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RedZone X</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- AdsGram SDK -->
+    <script src="https://sad.adsgram.ai/js/adsgram-ad-sdk.js"></script>
+    <style>
+        body { background-color: #0f0f0f; color: white; font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
+        .video-card { background: #1a1a1a; border-radius: 12px; overflow: hidden; border: 1px solid #222; transition: transform 0.2s; }
+        .video-card:active { transform: scale(0.95); }
+        .status-badge { background: rgba(220, 38, 38, 0.2); color: #ef4444; font-size: 10px; padding: 2px 6px; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <div class="max-w-md mx-auto p-4">
+        <!-- Header -->
+        <header class="flex justify-between items-center mb-6">
+            <div>
+                <h1 class="text-2xl font-bold tracking-tighter text-red-600">REDZONE <span class="text-white">X</span></h1>
+                <p class="text-[10px] text-gray-500 uppercase tracking-widest">Premium Content</p>
+            </div>
+            <div class="status-badge font-bold">LIVE</div>
+        </header>
+
+        <!-- Video Grid -->
+        <div id="video-list" class="grid grid-cols-2 gap-4">
+            <!-- Loading Skeleton -->
+            <div class="col-span-2 text-center py-20">
+                <div class="animate-spin inline-block w-8 h-8 border-4 border-red-600 border-t-transparent rounded-full mb-4"></div>
+                <p class="text-gray-400 text-sm">ভিডিও লোড হচ্ছে...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const RENDER_URL = "https://redzonex-bot.onrender.com"; 
+
+        async function fetchVideos() {
+            try {
+                const response = await fetch(`${RENDER_URL}/api/videos`);
+                const videos = await response.json();
+                const container = document.getElementById('video-list');
+                container.innerHTML = '';
+
+                if (videos.length === 0) {
+                    container.innerHTML = `
+                        <div class="col-span-2 text-center py-20">
+                            <p class="text-gray-500">কোনো ভিডিও পাওয়া যায়নি।<br>বটে ভিডিও আপলোড করুন।</p>
+                        </div>`;
+                    return;
+                }
+
+                videos.reverse().forEach(video => {
+                    const card = `
+                        <div class="video-card p-2" onclick="playVideo('${video.file_id}')">
+                            <div class="aspect-[9/16] bg-gradient-to-b from-gray-800 to-black rounded-lg mb-2 flex items-center justify-center relative group">
+                                <span class="text-3xl group-hover:scale-110 transition-transform">▶️</span>
+                                <div class="absolute bottom-2 right-2 bg-black/60 text-[10px] px-2 py-1 rounded">HD</div>
+                            </div>
+                            <p class="text-[11px] font-semibold truncate px-1">${video.caption}</p>
+                            <button class="w-full mt-2 py-2 bg-red-600 hover:bg-red-700 text-[10px] rounded-lg font-black uppercase tracking-tighter">WATCH NOW</button>
+                        </div>
+                    `;
+                    container.innerHTML += card;
+                });
+            } catch (error) {
+                document.getElementById('video-list').innerHTML = '<p class="col-span-2 text-center text-red-500">সার্ভার কানেকশন এরর!</p>';
+            }
+        }
+
+        function playVideo(fileId) {
+            // AdsGram অ্যাড এখানে যোগ করা যাবে
+            window.open(`https://t.me/redzonex_bot?start=${fileId}`, '_blank');
+        }
+
+        fetchVideos();
+    </script>
+</body>
+  </html>
